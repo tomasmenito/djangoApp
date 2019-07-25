@@ -1,6 +1,8 @@
 import datetime
-from django.utils import timezone
+
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
 from .models import Question
 
@@ -30,3 +32,25 @@ class QuestionModelTests(TestCase):
         recent_question = Question(pub_date=time_less_than_one_day_ago)
         self.assertIs(recent_question.was_published_recently(), True)
 
+
+def create_question(question_text, days):
+    """
+        Create a question with the given text and published in a given number of days
+        offset to now (negative for published in the past or positive to those not yet published)
+        """
+    time = timezone.now() + datetime.timedelta(days=days)
+    return Question.objects.create(question_text=question_text, pub_date=time)
+
+
+class QuestionIndexViewTests(TestCase):
+    def test_no_questions(self):
+        """
+        If no questions exist, an appropriate message is displayed
+        """
+        response = self.client.get(reverse("polls:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No polls are available.")
+        self.assertQuerysetEqual(response.context["latest_question_list"], [])
+
+
+        
