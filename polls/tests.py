@@ -49,8 +49,38 @@ class QuestionIndexViewTests(TestCase):
         """
         response = self.client.get(reverse("polls:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No polls are available.")
+        self.assertContains(response, "No polls available")
         self.assertQuerysetEqual(response.context["latest_question_list"], [])
 
+    def test_future_question(self):
+        """
+        Questions with a pub_date in the future are not displayed
+        """
+        create_question("Future question", days=30)
+        response = self.client.get(reverse("polls:index"))
+        self.assertEquals(response.status_code, 200)
+        self.assertQuerysetEqual(response.context["latest_question_list"], [])
 
-        
+    def test_future_questions_and_past_question(self):
+        """
+        If past and future exists, should show only past
+        """
+        create_question("Future question", days=30)
+        create_question("Past question", days=-30)
+        response = self.client.get(reverse("polls:index"))
+        self.assertQuerysetEqual(
+            response.context["latest_question_list"], ["<Question: Past question>"]
+        )
+
+    def test_two_past_questions(self):
+        """
+        All past questions should be showed
+        """
+        create_question("Past question 1", days=-30)
+        create_question("Past question 2", days=-31)
+        response = self.client.get(reverse("polls:index"))
+        self.assertQuerysetEqual(
+            response.context["latest_question_list"],
+            ["<Question: Past question 1>", "<Question: Past question 2>"],
+        )
+
